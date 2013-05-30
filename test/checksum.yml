@@ -1,0 +1,10 @@
+---
+install:
+  filename: hello.tar.gz
+  dirname: hello
+  sha1: 32e065eab462d0905c5a68caac52e51ac3127e5a
+  urls:
+  - http://192.168.222.1:8998/hello.tar.gz
+  target: install/target
+
+# vim: et ts=2

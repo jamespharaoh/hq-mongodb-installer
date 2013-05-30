@@ -1,0 +1,9 @@
+language: ruby
+before_script:
+  - sudo apt-get install -y lxc redir
+  - sudo ifconfig lxcbr0:0 192.168.222.1
+  - cd downloads; wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-2.4.3.tgz
+  - rackup &
+rvm:
+  - 1.9.3
+  - 2.0.0

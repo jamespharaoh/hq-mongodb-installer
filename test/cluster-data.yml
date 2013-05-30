@@ -1,0 +1,27 @@
+---
+install:
+  filename: mongodb-linux-x86_64-2.4.3.tgz
+  dirname: mongodb-linux-x86_64-2.4.3
+  sha1: 95bc0e0f66e64c66029b555726f4153e4b66c298
+  urls:
+  - http://192.168.222.1:8998/mongodb-linux-x86_64-2.4.3.tgz
+  target: /opt/mongodb-2.4.3
+user:
+  name: mongodb
+  create: true
+dirs:
+  - /var/log/mongodb
+  - /var/run/mongodb
+  - /var/lib/mongodb/data
+servers:
+  data:
+    exec: mongod
+    runlevels: 2345
+    config: |
+      port = 27018
+      logpath = /var/log/mongodb/data.log
+      logappend = true
+      pidfilepath = /var/run/mongodb/data.pid
+      dbpath = /var/lib/mongodb/data
+
+# vim: et ts=2

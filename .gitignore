@@ -1,0 +1,9 @@
+/.bundle
+/.gems
+/.stubs
+/.vagrant
+/doc
+/results
+/test-configs
+/*.gem
+/downloads/mongodb-*.tgz

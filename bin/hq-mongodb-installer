@@ -1,0 +1,189 @@
+#!/usr/bin/env ruby
+
+require "shellwords"
+require "yaml"
+
+config = YAML.load_file ARGV[0]
+
+# download mongo
+
+downloaded = false
+
+config["install"]["urls"].each do
+	|url|
+
+	# delete the file if it exists already
+
+	system "rm -f #{config["install"]["filename"]}"
+
+	# try and download file
+
+	next unless system "wget --quiet #{url}"
+
+	# check file exists
+
+	next unless File.exist? "#{config["install"]["filename"]}"
+
+	# check it's sha1
+
+	file_sha1 = `sha1sum #{config["install"]["filename"]}`.split.first
+
+	next unless file_sha1 == config["install"]["sha1"]
+
+	# we got it
+
+	downloaded = true
+	break
+
+end
+
+# error if the download failed
+
+unless downloaded
+	puts "Download failed"
+	exit 1
+end
+
+# extract file
+
+unless system "sudo tar xzf #{config["install"]["filename"]}"
+	puts "Extract failed"
+	exit 1
+end
+
+# move to install location
+
+unless system "sudo mkdir -p #{File.dirname config["install"]["target"]}"
+	puts "Install failed"
+	exit 1
+end
+
+system "sudo rm -rf #{config["install"]["target"]}"
+
+unless system "sudo mv #{config["install"]["dirname"]} #{config["install"]["target"]}"
+	puts "Install failed"
+	exit 1
+end
+
+puts "Install successful"
+
+# create user
+
+if config["user"]["create"] \
+	&& ! system("getent passwd #{config["user"]["name"]}")
+
+	unless system [
+		"sudo",
+		"useradd",
+		"-r",
+		config["user"]["name"],
+	].shelljoin
+		puts "Create user failed"
+		exit 1
+	end
+
+end
+
+# create directories
+
+config["dirs"].each do
+	|path|
+
+	unless system "sudo mkdir -p #{path}"
+		puts "Error creating #{path}"
+		exit 1
+	end
+
+	unless system "sudo chown #{config["user"]["name"]}:#{config["user"]["name"]} #{path}"
+		puts "Error setting ownership of #{path}"
+		exit 1
+	end
+
+end
+
+unless system "sudo mkdir -p /etc/mongodb"
+	puts "Error creating config dir"
+	exit 1
+end
+
+# iterate servers
+
+(config["servers"] || []).each do
+	|server_name, server|
+
+	# write upstart config
+
+	File.open "mongodb-#{server_name}.conf", "w" do
+		|file_io|
+
+		file_io.puts "limit nofile 20000 20000"
+		file_io.puts "kill timeout 300"
+
+		file_io.puts "start on runlevel [#{server["runlevels"]}]"
+		file_io.puts "stop on runlevel [!#{server["runlevels"]}]"
+
+		file_io.puts "script"
+
+		file_io.puts "\t" + [
+
+			"exec",
+			"start-stop-daemon",
+
+			"--start",
+
+			"--quiet",
+
+			"--chuid",
+			config["user"]["name"],
+
+			"--exec",
+			"#{config["install"]["target"]}/bin/#{server["exec"]}",
+
+			"--",
+
+			"--config",
+			"/etc/mongodb/#{server_name}.conf"
+
+		].shelljoin
+
+		file_io.puts "end script"
+
+	end
+
+	unless system "sudo mv mongodb-#{server_name}.conf /etc/init"
+		puts "Write upstart config #{server_name} failed"
+		exit 1
+	end
+
+	# reload upstart config
+
+	unless system "sudo initctl reload-configuration"
+		puts "Reload upstart config #{server_name} failed"
+		exit 1
+	end
+
+	# write config
+
+	File.open "#{server_name}.conf", "w" do
+		|file_io|
+
+		file_io.puts server["config"]
+
+	end
+
+	unless system "sudo mv #{server_name}.conf /etc/mongodb"
+		puts "Error writing config file #{server_name}.conf"
+		exit 1
+	end
+
+	# start service
+
+	unless system "sudo initctl start mongodb-#{server_name}"
+		puts "Start mongodb #{server_name} failed"
+		exit 1
+	end
+
+end
+
+exit 0
+
