@@ -1,4 +1,4 @@
-Feature:
+Feature: Setup a mongodb cluster
 
   Background:
 
@@ -6,7 +6,7 @@ Feature:
     And I start vagrant box "data"
     And I start vagrant box "shard"
 
-  Scenario:
+  Scenario: Setup cluster
 
     When I install mongo on "config" with "cluster-config.yml"
     And I install mongo on "data" with "cluster-data.yml"

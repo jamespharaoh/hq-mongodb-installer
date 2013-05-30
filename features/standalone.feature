@@ -1,10 +1,10 @@
-Feature:
+Feature: Setup a standalone mongo server
 
   Background:
 
     Given I start vagrant box "data"
 
-  Scenario:
+  Scenario: Setup standalone
 
     When I install mongo on "data" with "standalone.yml"
 
